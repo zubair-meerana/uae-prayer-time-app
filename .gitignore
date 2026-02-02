@@ -1,0 +1,38 @@
+# Expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Node modules
+node_modules/
+
+# npm
+package-lock.json
+
+# Yarn
+# yarn.lock
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Native directories (if using Expo Prebuild / Managed workflow without committing native code)
+android/
+ios/
+
+# MacOS
+.DS_Store
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# Web build
+web-build/
+dist/
