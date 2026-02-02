@@ -17,8 +17,7 @@ const PrayerList = ({ prayers, nextPrayerData }) => {
                 // Check if this is the next prayer
                 const isNext = nextPrayerData &&
                     nextPrayerData.nextPrayer &&
-                    nextPrayerData.nextPrayer.name === prayer.name &&
-                    !nextPrayerData.isTomorrow;
+                    nextPrayerData.nextPrayer.name === prayer.name;
 
                 return (
                     <PrayerItem

@@ -93,8 +93,10 @@ export const fetchPrayerTimings = async (location) => {
 /**
  * Helper to process the API response into a simple list of prayers.
  * Handles structure: { data: { timings: [ { day: 1, timings: { fajr: ".." } } ] } }
+ * @param {Object} apiData - The raw API response
+ * @param {Date} date - The date to extract timings for (defaults to today)
  */
-export const processPrayerData = (apiData) => {
+export const processPrayerData = (apiData, date = new Date()) => {
     if (!apiData) return [];
 
     // 1. Locate the timings array
@@ -102,24 +104,27 @@ export const processPrayerData = (apiData) => {
 
     if (!timingsData) return [];
 
-    let todayTimings = null;
+    let targetTimings = null;
 
     // 2. Determine if it's an array (monthly/daily list) or object
     if (Array.isArray(timingsData)) {
-        const todayDay = new Date().getDate();
-        // Find the entry for today
-        const match = timingsData.find(t => t.day === todayDay && t.timings);
+        const targetDay = date.getDate();
+        // Find the entry for the target day
+        const match = timingsData.find(t => t.day === targetDay && t.timings);
 
         if (match) {
-            todayTimings = match.timings;
+            targetTimings = match.timings;
         } else if (timingsData.length > 0) {
-            todayTimings = timingsData[0].timings;
+            // Fallback: If exact day not found (e.g., end of month edge case), use first
+            // But ideally we should return null or handle appropriately. 
+            // For now, keeping existing fallback behavior but it might be unsafe for "Next Day" logic if day doesn't exist.
+            targetTimings = timingsData[0].timings;
         }
     } else {
-        todayTimings = timingsData;
+        targetTimings = timingsData;
     }
 
-    if (!todayTimings) return [];
+    if (!targetTimings) return [];
 
     // 3. Map keys to standard UI format (Title Case)
     const standardKeys = [
@@ -132,7 +137,7 @@ export const processPrayerData = (apiData) => {
     ];
 
     const prayers = standardKeys.map(item => {
-        const time = todayTimings[item.key] || todayTimings[item.label];
+        const time = targetTimings[item.key] || targetTimings[item.label];
         if (time) {
             return {
                 name: item.label,

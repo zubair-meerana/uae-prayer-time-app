@@ -13,6 +13,10 @@ export const usePrayerTimes = () => {
     const [selectedEmirate, setSelectedEmirate] = useState('dubai');
     const [prayerTimes, setPrayerTimes] = useState([]);
     const [nextPrayer, setNextPrayer] = useState(null);
+    const [displayDate, setDisplayDate] = useState(new Date());
+    const [rawData, setRawData] = useState(null);
+    // Track if user has manually selected a date to prevent auto-switching back/forth inappropriately
+    const [manualOverride, setManualOverride] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [locationPermission, setLocationPermission] = useState(null);
@@ -61,12 +65,27 @@ export const usePrayerTimes = () => {
         setError(null);
         try {
             const data = await fetchPrayerTimings(selectedEmirate);
-            const processedPrayers = processPrayerData(data);
-            setPrayerTimes(processedPrayers);
+            setRawData(data); // Store raw data for switching dates
 
-            // Calculate next prayer immediately
+            // Initial load always tries to show "Today" first, then we update if needed
+            const now = new Date();
+            const processedPrayers = processPrayerData(data, now);
+            setPrayerTimes(processedPrayers);
+            setDisplayDate(now);
+
+            // Calculate next prayer
             const next = getNextPrayer(processedPrayers);
             setNextPrayer(next);
+
+            // If next prayer is tomorrow, and we haven't manually overridden, switch view to tomorrow
+            if (next && next.isTomorrow && !manualOverride) {
+                const tomorrow = new Date();
+                tomorrow.setDate(now.getDate() + 1);
+
+                setDisplayDate(tomorrow);
+                const tomorrowPrayers = processPrayerData(data, tomorrow);
+                setPrayerTimes(tomorrowPrayers);
+            }
 
             // Schedule notifications for these new times
             schedulePrayerNotifications(processedPrayers);
@@ -85,16 +104,54 @@ export const usePrayerTimes = () => {
     /**
      * 3. Update "Next Prayer" highlight every minute to keep UI fresh.
      */
+    /**
+     * 3. Update "Next Prayer" highlight every minute to keep UI fresh.
+     * Also checks if we need to auto-switch to tomorrow.
+     */
     useEffect(() => {
         const interval = setInterval(() => {
-            if (prayerTimes.length > 0) {
-                const next = getNextPrayer(prayerTimes);
-                setNextPrayer(next);
+            if (rawData) {
+                // Re-evaluate "Now" against "Today's" prayers to see if we moved to tomorrow
+                const now = new Date();
+
+                // Always check against TODAY'S data to decide transition
+                const todayPrayers = processPrayerData(rawData, now);
+                const next = getNextPrayer(todayPrayers);
+                setNextPrayer(next); // Keep this updated for banner
+
+                if (next && next.isTomorrow && !manualOverride) {
+                    // Auto-switch to tomorrow if not already
+                    const tomorrow = new Date();
+                    tomorrow.setDate(now.getDate() + 1);
+
+                    // Only update if displayDate is not already tomorrow
+                    if (displayDate.getDate() !== tomorrow.getDate()) {
+                        setDisplayDate(tomorrow);
+                        const tomorrowPrayers = processPrayerData(rawData, tomorrow);
+                        setPrayerTimes(tomorrowPrayers);
+                    }
+                }
             }
         }, 60000); // Check every minute
 
         return () => clearInterval(interval);
-    }, [prayerTimes]);
+    }, [rawData, manualOverride, displayDate]);
+
+    // Helper to switch dates manually
+    const toggleDate = useCallback(() => {
+        if (!rawData) return;
+
+        const now = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(now.getDate() + 1);
+
+        const isCurrentlyToday = displayDate.getDate() === now.getDate();
+        const newDate = isCurrentlyToday ? tomorrow : now;
+
+        setManualOverride(true); // User took control
+        setDisplayDate(newDate);
+        setPrayerTimes(processPrayerData(rawData, newDate));
+    }, [displayDate, rawData]);
 
     return {
         selectedEmirate,
@@ -105,5 +162,8 @@ export const usePrayerTimes = () => {
         error,
         refreshParams: loadData,
         availableEmirates: getAvailableEmirates(),
+        displayDate,
+        toggleDate,
+        isDisplayingTomorrow: displayDate.getDate() !== new Date().getDate()
     };
 };

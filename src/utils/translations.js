@@ -13,6 +13,8 @@ export const translations = {
         error: "Error",
         selectEmirate: "Select Emirate",
         cancel: "Cancel",
+        today: "Today",
+        tomorrow: "Tomorrow",
         prayers: {
             Fajr: "Fajr",
             Sunrise: "Sunrise",
@@ -45,6 +47,8 @@ export const translations = {
         error: "خطأ",
         selectEmirate: "اختر الإمارة",
         cancel: "إلغاء",
+        today: "اليوم",
+        tomorrow: "غداً",
         prayers: {
             Fajr: "الفجر",
             Sunrise: "الشروق",

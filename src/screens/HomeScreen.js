@@ -27,7 +27,10 @@ export default function HomeScreen() {
         loading,
         error,
         refreshParams,
-        availableEmirates
+        availableEmirates,
+        displayDate,
+        toggleDate,
+        isDisplayingTomorrow
     } = usePrayerTimes();
 
     const { t, language, toggleLanguage, isRTL } = useLanguage();
@@ -65,7 +68,41 @@ export default function HomeScreen() {
                 {/* Header Section */}
                 <View style={styles.header}>
                     <Text style={styles.appTitle}>{t('appTitle')}</Text>
-                    <Text style={styles.date}>{formatDate(new Date(), language)}</Text>
+                    <Text style={styles.date}>{formatDate(displayDate, language)}</Text>
+
+                    {/* Date Segmented Control */}
+                    <View style={styles.segmentedControl}>
+                        <TouchableOpacity
+                            onPress={() => !isDisplayingTomorrow && toggleDate()}
+                            style={[
+                                styles.segmentButton,
+                                styles.segmentLeft,
+                                !isDisplayingTomorrow && styles.segmentActive
+                            ]}
+                        >
+                            <Text style={[
+                                styles.segmentText,
+                                !isDisplayingTomorrow && styles.segmentTextActive
+                            ]}>
+                                {t('today')}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => isDisplayingTomorrow && toggleDate()}
+                            style={[
+                                styles.segmentButton,
+                                styles.segmentRight,
+                                isDisplayingTomorrow && styles.segmentActive
+                            ]}
+                        >
+                            <Text style={[
+                                styles.segmentText,
+                                isDisplayingTomorrow && styles.segmentTextActive
+                            ]}>
+                                {t('tomorrow')}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Emirate Selector */}
@@ -76,19 +113,23 @@ export default function HomeScreen() {
                 />
 
                 {/* Next Prayer Highlight Banner (Optional, Extra Visual) */}
-                {nextPrayer && !nextPrayer.isTomorrow && (
+                {nextPrayer && (
                     <View style={[styles.banner, isRTL && styles.rtlBanner]}>
                         <Text style={styles.bannerText}>
                             {t('nextPrayer')}: {t(`prayers.${nextPrayer.nextPrayer.name}`)}
                         </Text>
                         <View style={[styles.bannerRow, isRTL && styles.rtlDirection]}>
                             <Text style={styles.bannerTime}>
-                                {t('approx')} {
-                                    formatRemainingTime(
-                                        parseTime(nextPrayer.nextPrayer.time) - new Date(),
+                                {t('approx')} {(() => {
+                                    const target = parseTime(nextPrayer.nextPrayer.time);
+                                    if (nextPrayer.isTomorrow) {
+                                        target.setDate(target.getDate() + 1);
+                                    }
+                                    return formatRemainingTime(
+                                        target - new Date(),
                                         t
-                                    )
-                                }
+                                    );
+                                })()}
                             </Text>
                         </View>
                     </View>
@@ -210,5 +251,44 @@ const styles = StyleSheet.create({
     footerText: {
         color: '#AAA',
         fontSize: 12,
+    },
+    segmentedControl: {
+        flexDirection: 'row',
+        marginTop: 12,
+        backgroundColor: '#E0F2F1',
+        borderRadius: 25,
+        padding: 3,
+        alignSelf: 'center',
+    },
+    segmentButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 20,
+        minWidth: 90,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    segmentLeft: {
+        borderTopLeftRadius: 22,
+        borderBottomLeftRadius: 22,
+    },
+    segmentRight: {
+        borderTopRightRadius: 22,
+        borderBottomRightRadius: 22,
+    },
+    segmentActive: {
+        backgroundColor: '#00897B',
+        shadowColor: '#00897B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 3,
+    },
+    segmentText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#00695C',
+    },
+    segmentTextActive: {
+        color: '#FFFFFF',
     },
 });
