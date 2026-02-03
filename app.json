@@ -40,7 +40,8 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#ffffff"
+          "color": "#00897B",
+          "mode": "production"
         }
       ],
       [

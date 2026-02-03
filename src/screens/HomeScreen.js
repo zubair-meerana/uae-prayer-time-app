@@ -70,39 +70,41 @@ export default function HomeScreen() {
                     <Text style={styles.appTitle}>{t('appTitle')}</Text>
                     <Text style={styles.date}>{formatDate(displayDate, language)}</Text>
 
-                    {/* Date Segmented Control */}
-                    <View style={styles.segmentedControl}>
-                        <TouchableOpacity
-                            onPress={() => !isDisplayingTomorrow && toggleDate()}
-                            style={[
-                                styles.segmentButton,
-                                styles.segmentLeft,
-                                !isDisplayingTomorrow && styles.segmentActive
-                            ]}
-                        >
-                            <Text style={[
-                                styles.segmentText,
-                                !isDisplayingTomorrow && styles.segmentTextActive
-                            ]}>
-                                {t('today')}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => isDisplayingTomorrow && toggleDate()}
-                            style={[
-                                styles.segmentButton,
-                                styles.segmentRight,
-                                isDisplayingTomorrow && styles.segmentActive
-                            ]}
-                        >
-                            <Text style={[
-                                styles.segmentText,
-                                isDisplayingTomorrow && styles.segmentTextActive
-                            ]}>
-                                {t('tomorrow')}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                    {/* Date Segmented Control - Only show when next prayer is tomorrow */}
+                    {nextPrayer && nextPrayer.isTomorrow && (
+                        <View style={styles.segmentedControl}>
+                            <TouchableOpacity
+                                onPress={() => !isDisplayingTomorrow && toggleDate()}
+                                style={[
+                                    styles.segmentButton,
+                                    styles.segmentLeft,
+                                    !isDisplayingTomorrow && styles.segmentActive
+                                ]}
+                            >
+                                <Text style={[
+                                    styles.segmentText,
+                                    !isDisplayingTomorrow && styles.segmentTextActive
+                                ]}>
+                                    {t('today')}
+                                </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => isDisplayingTomorrow && toggleDate()}
+                                style={[
+                                    styles.segmentButton,
+                                    styles.segmentRight,
+                                    isDisplayingTomorrow && styles.segmentActive
+                                ]}
+                            >
+                                <Text style={[
+                                    styles.segmentText,
+                                    isDisplayingTomorrow && styles.segmentTextActive
+                                ]}>
+                                    {t('tomorrow')}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 {/* Emirate Selector */}

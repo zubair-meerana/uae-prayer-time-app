@@ -18,11 +18,17 @@ export const registerForPushNotificationsAsync = async () => {
     let token;
 
     if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
+        await Notifications.setNotificationChannelAsync('prayer-alarm', {
+            name: 'Prayer Alarms',
             importance: Notifications.AndroidImportance.MAX,
-            vibrationPattern: [0, 250, 250, 250],
-            lightColor: '#FF231F7C',
+            vibrationPattern: [0, 500, 500, 500],
+            lightColor: '#00897B',
+            sound: 'default',
+            enableLights: true,
+            enableVibrate: true,
+            showBadge: true,
+            lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+            bypassDnd: true, // Bypass Do Not Disturb
         });
     }
 
@@ -63,18 +69,29 @@ export const schedulePrayerNotifications = async (prayers) => {
 
             await Notifications.scheduleNotificationAsync({
                 content: {
-                    title: "It's time for " + prayer.name,
-                    body: `Time to pray ${prayer.name} (${prayer.time})`,
-                    sound: 'default', // To use custom sound, reference the file configured in app.json
-                    data: { data: 'goes here' },
+                    title: `🕌 ${prayer.name} Prayer Time`,
+                    body: `It's time for ${prayer.name} prayer (${prayer.time})`,
+                    sound: 'default',
+                    priority: Notifications.AndroidNotificationPriority.MAX,
+                    sticky: false,
+                    autoDismiss: false,
+                    data: {
+                        prayerName: prayer.name,
+                        prayerTime: prayer.time
+                    },
+                    // Android specific
+                    ...(Platform.OS === 'android' && {
+                        channelId: 'prayer-alarm',
+                        color: '#00897B',
+                    }),
                 },
                 trigger: {
                     seconds: secondsUntil,
-                    channelId: 'default', // for Android
+                    channelId: 'prayer-alarm', // for Android
                 },
             });
 
-            console.log(`Scheduled ${prayer.name} in ${Math.round(secondsUntil / 60)} minutes`);
+            console.log(`Scheduled ${prayer.name} alarm in ${Math.round(secondsUntil / 60)} minutes`);
         }
     }
 };
