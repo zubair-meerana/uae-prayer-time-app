@@ -4,11 +4,23 @@ import HomeScreen from './src/screens/HomeScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
 import * as Notifications from 'expo-notifications';
 import { registerBackgroundTasks } from './src/services/notificationService';
+import { useEffect } from 'react';
 
-// Initialize background tasks
-registerBackgroundTasks();
+// Configure notification handler
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+    }),
+});
 
 export default function App() {
+    useEffect(() => {
+        // Initialize background tasks
+        registerBackgroundTasks();
+    }, []);
+
     return (
         <LanguageProvider>
             <View style={styles.container}>
@@ -22,6 +34,6 @@ export default function App() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F5F5F5', // Matched with screen bg
+        backgroundColor: '#F5F5F5',
     },
 });

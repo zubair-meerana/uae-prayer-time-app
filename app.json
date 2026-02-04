@@ -5,7 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -15,7 +16,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "requireFullScreen": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow UAE Prayer Times to use your location for prayer times.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Allow UAE Prayer Times to use your location for prayer times."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -36,9 +42,11 @@
         "android.permission.VIBRATE",
         "android.permission.USE_FULL_SCREEN_INTENT"
       ]
+     
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       [
@@ -46,16 +54,22 @@
         {
           "icon": "./assets/icon.png",
           "color": "#00897B",
-          "mode": "production"
+          "mode": "production",
+          "sounds": [
+            "./assets/notification.wav"
+          ]
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow UAE Prayer Times to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Allow UAE Prayer Times to use your location for prayer times."
         }
       ]
     ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "eas": {
         "projectId": "8e8ab294-c8f0-4efd-a90a-a5aa7cdcda2b"

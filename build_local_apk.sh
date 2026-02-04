@@ -5,17 +5,21 @@ set -e
 export ANDROID_SDK_ROOT=/opt/android-sdk
 mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
 
-# 2. Download command line tools
-TMP_ZIP="/tmp/cmdline-tools.zip"
-if [ ! -f "$TMP_ZIP" ]; then
-  curl -L -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip"
-fi
+# 2. Download command line tools only if not installed
+if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
+  TMP_ZIP="/tmp/cmdline-tools.zip"
+  if [ ! -f "$TMP_ZIP" ]; then
+    curl -L -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip"
+  fi
 
-# 3. Unzip and install
-unzip -q "$TMP_ZIP" -d /tmp/cmdline-tools
-mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-mv /tmp/cmdline-tools/cmdline-tools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
-rm -rf /tmp/cmdline-tools "$TMP_ZIP"
+  # 3. Unzip and install
+  unzip -q "$TMP_ZIP" -d /tmp/cmdline-tools
+  mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+  mv /tmp/cmdline-tools/cmdline-tools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+  rm -rf /tmp/cmdline-tools "$TMP_ZIP"
+else
+  echo "Android SDK cmdline-tools already installed, skipping download"
+fi
 
 # 4. Update PATH for SDK tools
 export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"

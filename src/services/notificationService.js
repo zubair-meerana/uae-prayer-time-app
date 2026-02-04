@@ -35,12 +35,12 @@ export const registerForPushNotificationsAsync = async () => {
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
             lightColor: '#FF0000',
-            sound: 'default', // In a production app, this would be the Adhan file
+            sound: 'default',
             enableLights: true,
             enableVibrate: true,
             showBadge: true,
             lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-            bypassDnd: true, // Crucial for "Alarm" behavior
+            bypassDnd: true,
         });
 
         // High priority for the 2-minute reminder
@@ -53,6 +53,7 @@ export const registerForPushNotificationsAsync = async () => {
         });
     }
 
+    // Updated permissions API for Expo SDK 54+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
