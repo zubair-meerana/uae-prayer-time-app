@@ -28,8 +28,13 @@
         "ACCESS_FINE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "SCHEDULE_EXACT_ALARM",
+        "VIBRATE",
+        "USE_FULL_SCREEN_INTENT",
+        "POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.VIBRATE",
+        "android.permission.USE_FULL_SCREEN_INTENT"
       ]
     },
     "web": {

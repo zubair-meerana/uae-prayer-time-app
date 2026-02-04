@@ -6,7 +6,7 @@ import {
     getAvailableEmirates
 } from '../services/prayerApi';
 import { getNextPrayer } from '../utils/timeUtils';
-import { schedulePrayerNotifications } from '../services/notificationService';
+import { schedulePrayerNotifications, storeRawDataForBackground } from '../services/notificationService';
 
 export const usePrayerTimes = () => {
     // Default to Dubai if location detection fails
@@ -87,7 +87,10 @@ export const usePrayerTimes = () => {
                 setPrayerTimes(tomorrowPrayers);
             }
 
-            // Schedule notifications for these new times
+            // Store for background task
+            storeRawDataForBackground(data);
+
+            // Schedule notifications for ONLY the next upcoming prayer
             schedulePrayerNotifications(processedPrayers);
 
         } catch (err) {

@@ -2,6 +2,11 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import HomeScreen from './src/screens/HomeScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
+import * as Notifications from 'expo-notifications';
+import { registerBackgroundTasks } from './src/services/notificationService';
+
+// Initialize background tasks
+registerBackgroundTasks();
 
 export default function App() {
     return (

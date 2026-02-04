@@ -14,7 +14,6 @@ import { usePrayerTimes } from '../hooks/usePrayerTimes';
 import { formatDate, parseTime, formatRemainingTime } from '../utils/timeUtils';
 import PrayerList from '../components/PrayerList';
 import EmirateSelector from '../components/EmirateSelector';
-import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/notificationService';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -38,14 +37,6 @@ export default function HomeScreen() {
     // Setup notifications on mount
     useEffect(() => {
         registerForPushNotificationsAsync();
-
-        // Listener for when a notification is received while app is foreground
-        const subscription = Notifications.addNotificationReceivedListener(notification => {
-            // Handle foreground notification if needed
-            console.log('Notification received:', notification);
-        });
-
-        return () => subscription.remove();
     }, []);
 
     return (
