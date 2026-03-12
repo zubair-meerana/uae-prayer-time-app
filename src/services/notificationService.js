@@ -10,6 +10,7 @@ import {
   stopAlarmSound,
   configureAudioMode,
 } from "./audioService";
+import * as Device from "expo-device";
 
 // Constants
 const PRAYER_BACKGROUND_TASK = "PRAYER_BACKGROUND_TASK";
@@ -62,9 +63,22 @@ export const registerForPushNotificationsAsync = async () => {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
+  // Only request permissions if not already granted
   if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
+  }
+  
+  // For Android, we also need to check if we can post notifications (API 33+)
+  if (Platform.OS === 'android' && Device.deviceId) {
+    try {
+      const { granted } = await Notifications.isAvailableAsync();
+      if (!granted) {
+        finalStatus = 'undetermined'; // Force permission request
+      }
+    } catch (error) {
+      console.warn("Error checking notification availability:", error);
+    }
   }
 
   return finalStatus === "granted";
@@ -192,42 +206,40 @@ export const schedulePrayerNotifications = async (prayers) => {
 };
 
 /**
- * Registers the background fetch task.
- */
-export const registerBackgroundTasks = async () => {
-  if (Platform.OS === "web") return;
+   * Registers the background fetch task.
+   */
+  export const registerBackgroundTasks = async () => {
+    if (Platform.OS === "web") return;
 
-  try {
-    const isRegistered = await TaskManager.isTaskRegisteredAsync(
-      PRAYER_BACKGROUND_TASK,
-    );
-    if (!isRegistered) {
-      await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
-        minimumInterval: 60 * 5, // Every 5 minutes for more frequent checks
-        stopOnTerminate: false,
-        startOnBoot: true,
-      });
-      console.log("Background task registered");
-    }
-  } catch (err) {
-    console.log("Background task registration failed:", err);
-
-    // Fallback: try with different configuration for better compatibility
     try {
-      await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
-        minimumInterval: 60 * 15, // 15 minutes as fallback
-        stopOnTerminate: false,
-        startOnBoot: true,
-      });
-      console.log("Background task registered with fallback config");
-    } catch (fallbackErr) {
-      console.log(
-        "Background task registration failed with fallback too:",
-        fallbackErr,
+      const isRegistered = await TaskManager.isTaskRegisteredAsync(
+        PRAYER_BACKGROUND_TASK,
       );
+      if (!isRegistered) {
+        // Try to register with preferred configuration first
+        try {
+          await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
+            minimumInterval: 60 * 5, // Every 5 minutes for more frequent checks
+            stopOnTerminate: false,
+            startOnBoot: true,
+          });
+          console.log("Background task registered with 5-minute interval");
+        } catch (primaryError) {
+          console.log("Primary background task registration failed:", primaryError);
+          
+          // Fallback to 15-minute interval
+          await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
+            minimumInterval: 60 * 15, // 15 minutes as fallback
+            stopOnTerminate: false,
+            startOnBoot: true,
+          });
+          console.log("Background task registered with 15-minute interval fallback");
+        }
+      }
+    } catch (err) {
+      console.log("Background task registration failed:", err);
     }
-  }
-};
+  };
 
 /**
  * Pre-schedule prayer notifications for the entire month when app starts or updates prayer times
@@ -410,55 +422,108 @@ const parseTimeForDate = (timeStr, date) => {
 };
 
 /**
- * Background Task Definition
- * Runs periodically to ensure notifications are refreshed even if the app isn't opened.
+ * Debug function to list all scheduled notifications
  */
-TaskManager.defineTask(PRAYER_BACKGROUND_TASK, async () => {
+export const listScheduledNotifications = async () => {
   try {
-    const now = new Date();
-    const rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA);
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    console.log("Scheduled notifications count:", scheduled.length);
+    console.log(
+      "Scheduled notifications:",
+      scheduled.map((notif, index) => ({
+        id: notif.identifier,
+        title: notif.content.title,
+        body: notif.content.body,
+        date: notif.trigger?.date
+          ? new Date(notif.trigger.date).toLocaleString()
+          : "No date trigger",
+        data: notif.content.data,
+      })),
+    );
+    return scheduled;
+  } catch (error) {
+    console.error("Error getting scheduled notifications:", error);
+    return [];
+  }
+};
 
-    if (rawDataStr) {
-      const rawData = JSON.parse(rawDataStr);
-      const prayers = processPrayerData(rawData, now);
-      // Use the pre-scheduling function to ensure all monthly notifications are scheduled
-      const lastKnownEmirate = await AsyncStorage.getItem(
-        "@last_known_emirate",
-      );
-      if (lastKnownEmirate) {
-        await preScheduleMonthlyPrayerNotifications(rawData, lastKnownEmirate);
+/**
+   * Background Task Definition
+   * Runs periodically to ensure notifications are refreshed even if the app isn't opened.
+   */
+  TaskManager.defineTask(PRAYER_BACKGROUND_TASK, async () => {
+    try {
+      const now = new Date();
+      let rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA);
+
+      // Always try to get fresh data if we don't have valid cached data
+      if (!rawDataStr) {
+        console.log("Background task: No cached data found, attempting to fetch fresh data");
+        try {
+          // Get the last known location/emirate from storage
+          const lastKnownEmirate = await AsyncStorage.getItem(
+            "@last_known_emirate",
+          );
+          if (lastKnownEmirate) {
+            const freshData = await fetchPrayerTimings(lastKnownEmirate);
+            await preScheduleMonthlyPrayerNotifications(
+              freshData,
+              lastKnownEmirate,
+            );
+
+            // Store the fresh data for future background tasks
+            await storeRawDataForBackground(freshData);
+            rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA); // Refresh the cached data
+          }
+        } catch (fetchError) {
+          console.error("Background task: Failed to fetch fresh data:", fetchError);
+          // Continue with whatever cached data we might have
+        }
       }
 
-      return BackgroundTask.BackgroundTaskResult.NewData;
-    }
-
-    // If no stored data, try to fetch fresh data
-    try {
-      // Get the last known location/emirate from storage
-      const lastKnownEmirate = await AsyncStorage.getItem(
-        "@last_known_emirate",
-      );
-      if (lastKnownEmirate) {
-        const freshData = await fetchPrayerTimings(lastKnownEmirate);
-        await preScheduleMonthlyPrayerNotifications(
-          freshData,
-          lastKnownEmirate,
+      if (rawDataStr) {
+        const rawData = JSON.parse(rawDataStr);
+        const processedData = processPrayerData(rawData, now);
+        const prayers = processedData.prayers || processedData;
+        // Use the pre-scheduling function to ensure all monthly notifications are scheduled
+        const lastKnownEmirate = await AsyncStorage.getItem(
+          "@last_known_emirate",
         );
-
-        // Store the fresh data for future background tasks
-        await storeRawDataForBackground(freshData);
+        if (lastKnownEmirate) {
+          await preScheduleMonthlyPrayerNotifications(rawData, lastKnownEmirate);
+        }
 
         return BackgroundTask.BackgroundTaskResult.NewData;
       }
-    } catch (fetchError) {
-      console.error("Background task: Failed to fetch fresh data:", fetchError);
+
+      // If we still don't have data, try one more time to fetch based on IP location detection
+      try {
+        // Get the last known location/emirate from storage
+        const lastKnownEmirate = await AsyncStorage.getItem(
+          "@last_known_emirate",
+        );
+        if (lastKnownEmirate) {
+          const freshData = await fetchPrayerTimings(lastKnownEmirate);
+          await preScheduleMonthlyPrayerNotifications(
+            freshData,
+            lastKnownEmirate,
+          );
+
+          // Store the fresh data for future background tasks
+          await storeRawDataForBackground(freshData);
+
+          return BackgroundTask.BackgroundTaskResult.NewData;
+        }
+      } catch (fetchError) {
+        console.error("Background task: Failed to fetch fresh data on retry:", fetchError);
+      }
+
+      return BackgroundTask.BackgroundTaskResult.NoData;
+    } catch (error) {
+      console.error("Background task error:", error);
+      return BackgroundTask.BackgroundTaskResult.Failed;
     }
-  } catch (error) {
-    console.error("Background task error:", error);
-    return BackgroundTask.BackgroundTaskResult.Failed;
-  }
-  return BackgroundTask.BackgroundTaskResult.NoData;
-});
+  });
 
 /**
  * Gets notification settings from AsyncStorage

@@ -22,66 +22,93 @@ export const configureAudioMode = async () => {
 };
 
 /**
- * Load and play a sound file
- * @param {string} soundUri - URI of the sound file to play
- * @param {boolean} loop - Whether to loop the sound
- */
-export const playAlarmSound = async (soundUri = null, loop = true) => {
-  try {
-    if (isPlaying) {
-      await stopAlarmSound();
-    }
-
-    // Configure audio mode for maximum effectiveness
-    await configureAudioMode();
-
-    // If no specific sound is provided, use a system sound or default
-    if (!soundUri) {
-      // Try to play a system sound
-      try {
-        await Audio.playSystemSoundAsync(Audio.SystemSoundID.Vibrate);
-        // For a more persistent alarm, we'll use a workaround with notifications
-        isPlaying = true;
-        return null;
-      } catch (systemSoundError) {
-        console.log(
-          "System sound not available, proceeding with notification-based alarm",
-        );
+   * Load and play a sound file
+   * @param {string} soundUri - URI of the sound file to play
+   * @param {boolean} loop - Whether to loop the sound
+   */
+  export const playAlarmSound = async (soundUri = null, loop = true) => {
+    try {
+      if (isPlaying) {
+        await stopAlarmSound();
       }
-    }
 
-    // If a specific sound URI is provided, play it
-    if (soundUri) {
-      const { sound, status } = await Audio.Sound.createAsync(
-        { uri: soundUri },
-        {
-          shouldPlay: true,
-          isLooping: loop,
-          volume: 1.0,
-        },
-        onPlaybackStatusUpdate,
-      );
+      // Configure audio mode for maximum effectiveness
+      await configureAudioMode();
 
-      soundObject = sound;
+      // If no specific sound is provided, try to use a default alarm sound
+      if (!soundUri) {
+        // Try to use a built-in alarm sound first
+        try {
+          // For Android, we can try to use a notification sound
+          if (Platform.OS === 'android') {
+            // Try to play a system alarm sound
+            try {
+              await Audio.playSystemSoundAsync(Audio.SystemSoundID.Alarm);
+              isPlaying = true;
+              return null;
+            } catch (alarmError) {
+              // Fallback to vibration
+              try {
+                await Audio.playSystemSoundAsync(Audio.SystemSoundID.Vibrate);
+                isPlaying = true;
+                return null;
+              } catch (vibrateError) {
+                console.log(
+                  "System alarm/vibration sounds not available, proceeding with notification-based alarm",
+                );
+              }
+            }
+          } else {
+            // For iOS, try system sounds
+            try {
+              await Audio.playSystemSoundAsync(Audio.SystemSoundID.Vibrate);
+              isPlaying = true;
+              return null;
+            } catch (iosSoundError) {
+              console.log(
+                "System sound not available, proceeding with notification-based alarm",
+              );
+            }
+          }
+        } catch (systemSoundError) {
+          console.log(
+            "System sound not available, proceeding with notification-based alarm",
+          );
+        }
+      }
+
+      // If a specific sound URI is provided, play it
+      if (soundUri) {
+        const { sound, status } = await Audio.Sound.createAsync(
+          { uri: soundUri },
+          {
+            shouldPlay: true,
+            isLooping: loop,
+            volume: 1.0,
+          },
+          onPlaybackStatusUpdate,
+        );
+
+        soundObject = sound;
+        isPlaying = true;
+
+        // Increase volume to maximum
+        await sound.setVolumeAsync(1.0);
+
+        return sound;
+      }
+
+      // If we reach here, we're using a notification-based alarm
       isPlaying = true;
+      return null;
+    } catch (error) {
+      console.error("Error playing alarm sound:", error);
 
-      // Increase volume to maximum
-      await sound.setVolumeAsync(1.0);
-
-      return sound;
+      // Even if sound fails, mark as playing to prevent overlapping alarms
+      isPlaying = true;
+      return null;
     }
-
-    // If we reach here, we're using a notification-based alarm
-    isPlaying = true;
-    return null;
-  } catch (error) {
-    console.error("Error playing alarm sound:", error);
-
-    // Even if sound fails, mark as playing to prevent overlapping alarms
-    isPlaying = true;
-    return null;
-  }
-};
+  };
 
 /**
  * Stop the currently playing alarm sound
