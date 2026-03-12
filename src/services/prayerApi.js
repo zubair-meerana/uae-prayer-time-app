@@ -250,7 +250,26 @@ export const processPrayerData = (apiData, date = new Date()) => {
     })
     .filter(Boolean);
 
-  return prayers;
+  // Extract Hijri information if available
+  let hijriInfo = null;
+  if (Array.isArray(timingsData)) {
+    const targetDay = date.getDate();
+    const match = timingsData.find((t) => t.day === targetDay && t.timings);
+
+     if (match) {
+       hijriInfo = {
+         day: match.hijri_day,
+         month: match.month, // Hijri month name
+         year: match.hijri_year || apiData.data?.year, // Hijri year
+         day_name: match.day_name,
+       };
+     }
+  }
+
+  return {
+    prayers,
+    hijri: hijriInfo,
+  };
 };
 
 /**

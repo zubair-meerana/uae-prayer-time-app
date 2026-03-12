@@ -21,20 +21,20 @@ import { registerForPushNotificationsAsync } from "../services/notificationServi
 import { useLanguage } from "../context/LanguageContext";
 
 export default function HomeScreen() {
-  const {
-    selectedEmirate,
-    setSelectedEmirate,
-    prayerTimes,
-    nextPrayer,
-    loading,
-    error,
-    refreshParams,
-    availableEmirates,
-    displayDate,
-    toggleDate,
-    isDisplayingTomorrow,
-    triggerTestAlarm,
-  } = usePrayerTimes();
+   const {
+     selectedEmirate,
+     setSelectedEmirate,
+     prayerTimes,
+     nextPrayer,
+     loading,
+     error,
+     refreshParams,
+     availableEmirates,
+     displayDate,
+     toggleDate,
+     isDisplayingTomorrow,
+     getCurrentHijriDate,
+   } = usePrayerTimes();
 
   const { t, language, toggleLanguage, isRTL } = useLanguage();
 
@@ -176,15 +176,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Test Alarm Button */}
-        <View style={styles.testAlarmContainer}>
-          <TouchableOpacity
-            style={styles.testAlarmButton}
-            onPress={triggerTestAlarm}
-          >
-            <Text style={styles.testAlarmButtonText}>{t("testAlarm")}</Text>
-          </TouchableOpacity>
-        </View>
+
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -325,6 +317,27 @@ const styles = StyleSheet.create({
   },
   segmentTextActive: {
     color: "#FFFFFF",
+  },
+  debugButtonContainer: {
+    alignItems: "center",
+    marginVertical: 10,
+    paddingHorizontal: 20,
+  },
+  debugButton: {
+    backgroundColor: "#9E9E9E", // Gray color for debug button
+    paddingHorizontal: 30,
+    paddingVertical: 10,
+    borderRadius: 30,
+    elevation: 2,
+    shadowColor: "#9E9E9E",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  debugButtonText: {
+    color: "white",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   testAlarmContainer: {
     alignItems: "center",
