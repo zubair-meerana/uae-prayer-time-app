@@ -307,6 +307,15 @@ export const usePrayerTimes = () => {
     setEnableAdjustments,
     applyPrayerTimeAdjustments,
     triggerTestAlarm,
+    getCurrentHijriDate,
+  };
+
+  // Function to get current Hijri date from the API data
+  const getCurrentHijriDate = () => {
+    if (!rawData) return null;
+
+    const todayData = processPrayerData(rawData, new Date());
+    return todayData.hijri || null;
   };
 
   // Function to trigger a test alarm in 5 seconds
