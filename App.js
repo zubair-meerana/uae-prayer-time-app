@@ -1,17 +1,17 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
-import HomeScreen from "./src/screens/HomeScreen";
 import { LanguageProvider } from "./src/context/LanguageContext";
 import * as Notifications from "expo-notifications";
 import * as BackgroundTask from "expo-background-task";
 import { registerBackgroundTasks } from "./src/services/notificationService";
 import { useEffect } from "react";
 import { AppState } from "react-native";
+import AppNavigator from "./src/navigation/AppNavigator";
 
 // Configure notification handler
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -37,17 +37,8 @@ export default function App() {
 
   return (
     <LanguageProvider>
-      <View style={styles.container}>
-        <HomeScreen />
-        <StatusBar style="dark" />
-      </View>
+      <AppNavigator />
+      <StatusBar style="dark" />
     </LanguageProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F5F5F5",
-  },
-});

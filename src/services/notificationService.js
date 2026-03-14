@@ -11,6 +11,7 @@ import {
   configureAudioMode,
 } from "./audioService";
 import * as Device from "expo-device";
+import { logNotificationToHistory } from "./notificationHistoryService";
 
 // Constants
 const PRAYER_BACKGROUND_TASK = "PRAYER_BACKGROUND_TASK";
@@ -24,7 +25,8 @@ const REMINDER_MINUTES = 2;
  */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true, // Show alerts for test alarms and prayer times
+    shouldShowBanner: true, // Show alerts for test alarms and prayer times
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
@@ -153,6 +155,14 @@ export const schedulePrayerNotifications = async (prayers) => {
           date: reminderTime, // Use absolute date trigger for precision
         },
       });
+      // Log to history
+      await logNotificationToHistory({
+        prayerName: nextPrayer.name,
+        type: "reminder",
+        title: `⏰ ${nextPrayer.name} Prayer Soon`,
+        scheduledTime: reminderTime.toISOString(),
+        status: "scheduled",
+      });
       console.log(
         `[Scheduled] Reminder for ${nextPrayer.name} at ${reminderTime.toLocaleTimeString()}`,
       );
@@ -190,25 +200,26 @@ export const schedulePrayerNotifications = async (prayers) => {
           body: `It is now time for ${nextPrayer.name} prayer`,
           sound: "default",
           priority: Notifications.AndroidNotificationPriority.MAX,
-          sticky: true, // Makes it alarm-like (harder to swipe away)
-          autoDismiss: false, // Requires user interaction
           data: { prayerName: nextPrayer.name, type: "alarm" },
           ...(Platform.OS === "android" && {
             channelId: "prayer-alarm",
             vibrationPattern: prayerSettings.vibration
               ? [0, 1000, 500, 1000, 500, 1000]
               : null,
-            category: "alarm",
-            interruptionFilter: "priority",
-            lockScreenVisibility:
-              Notifications.AndroidNotificationVisibility.PUBLIC,
-            fullScreenIntent: true, // This enables full-screen notifications
           }),
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: prayerTime, // Exact date trigger
         },
+      });
+      // Log to history
+      await logNotificationToHistory({
+        prayerName: nextPrayer.name,
+        type: "alarm",
+        title: `🕌 ${nextPrayer.name} Prayer Time`,
+        scheduledTime: prayerTime.toISOString(),
+        status: "scheduled",
       });
       console.log(
         `[Scheduled] Alarm for ${nextPrayer.name} at ${prayerTime.toLocaleTimeString()}`,
@@ -344,8 +355,6 @@ export const preScheduleMonthlyPrayerNotifications = async (
                   body: `It is now time for ${prayerName} prayer`,
                   sound: "default",
                   priority: Notifications.AndroidNotificationPriority.MAX,
-                  sticky: true,
-                  autoDismiss: false,
                   data: {
                     prayerName,
                     type: "alarm",
@@ -356,15 +365,9 @@ export const preScheduleMonthlyPrayerNotifications = async (
                     vibrationPattern: prayerSettings.vibration
                       ? [0, 1000, 500, 1000, 500, 1000]
                       : null,
-                    category: "alarm",
-                    interruptionFilter: "priority",
-                    lockScreenVisibility:
-                      Notifications.AndroidNotificationVisibility.PUBLIC,
-                    fullScreenIntent: true,
                   }),
                   ios: {
                     sound: "default",
-                    _tag: `prayer-${prayerName}-${targetDate.toISOString()}`, // Unique identifier
                   },
                 },
                 trigger: {

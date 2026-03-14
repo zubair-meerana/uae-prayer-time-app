@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Slider, Switch } from 'react-native';
-import { useLanguage } from '../context/LanguageContext';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Slider,
+  Switch,
+} from "react-native";
+import { useLanguage } from "../context/LanguageContext";
 
 const PrayerTimeAdjustmentSettings = ({
   visible,
@@ -8,16 +16,16 @@ const PrayerTimeAdjustmentSettings = ({
   prayerTimeAdjustments,
   setPrayerTimeAdjustments,
   enableAdjustments,
-  setEnableAdjustments
+  setEnableAdjustments,
 }) => {
   const { t, isRTL } = useLanguage();
 
-  const prayerNames = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+  const prayerNames = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
 
   const handleAdjustmentChange = (prayerName, value) => {
-    setPrayerTimeAdjustments(prev => ({
+    setPrayerTimeAdjustments((prev) => ({
       ...prev,
-      [prayerName]: value
+      [prayerName]: value,
     }));
   };
 
@@ -30,10 +38,10 @@ const PrayerTimeAdjustmentSettings = ({
     >
       <View style={styles.centeredView}>
         <View style={[styles.modalView, isRTL && styles.rtlModalView]}>
-          <Text style={styles.modalTitle}>{t('adjustPrayerTimes')}</Text>
+          <Text style={styles.modalTitle}>{t("adjustPrayerTimes")}</Text>
 
           <View style={styles.adjustmentToggleContainer}>
-            <Text style={styles.toggleLabel}>{t('enableAdjustments')}</Text>
+            <Text style={styles.toggleLabel}>{t("enableAdjustments")}</Text>
             <Switch
               value={enableAdjustments}
               onValueChange={setEnableAdjustments}
@@ -48,11 +56,11 @@ const PrayerTimeAdjustmentSettings = ({
                 <View key={prayerName} style={styles.sliderContainer}>
                   <View style={styles.sliderHeader}>
                     <Text style={styles.sliderLabel}>
-                      {t(`prayers.${prayerName}`)}
+                      {t(prayerName.toLowerCase())}
                     </Text>
                     <Text style={styles.sliderValue}>
-                      {prayerTimeAdjustments[prayerName] > 0 ? '+' : ''}
-                      {prayerTimeAdjustments[prayerName]} {t('minutes')}
+                      {prayerTimeAdjustments[prayerName] > 0 ? "+" : ""}
+                      {prayerTimeAdjustments[prayerName]} {t("minutes")}
                     </Text>
                   </View>
                   <Slider
@@ -61,14 +69,16 @@ const PrayerTimeAdjustmentSettings = ({
                     maximumValue={60}
                     step={5}
                     value={prayerTimeAdjustments[prayerName] || 0}
-                    onValueChange={(value) => handleAdjustmentChange(prayerName, value)}
+                    onValueChange={(value) =>
+                      handleAdjustmentChange(prayerName, value)
+                    }
                     minimumTrackTintColor="#00897B"
                     maximumTrackTintColor="#d3d3d3"
                     thumbStyle={styles.thumb}
                   />
                   <View style={styles.sliderLabels}>
-                    <Text style={styles.sliderLabelSmall}>{t('earlier')}</Text>
-                    <Text style={styles.sliderLabelSmall}>{t('later')}</Text>
+                    <Text style={styles.sliderLabelSmall}>{t("earlier")}</Text>
+                    <Text style={styles.sliderLabelSmall}>{t("later")}</Text>
                   </View>
                 </View>
               ))}
@@ -79,7 +89,7 @@ const PrayerTimeAdjustmentSettings = ({
             style={[styles.button, styles.buttonClose]}
             onPress={onClose}
           >
-            <Text style={styles.textStyle}>{t('done')}</Text>
+            <Text style={styles.textStyle}>{t("done")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -99,16 +109,16 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     padding: 20,
-    width: '90%',
-    maxHeight: '80%',
+    width: "90%",
+    maxHeight: "80%",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 2
+      height: 2,
     },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-    elevation: 5
+    elevation: 5,
   },
   rtlModalView: {
     // Any RTL specific styling
@@ -121,17 +131,17 @@ const styles = StyleSheet.create({
     color: "#00897B",
   },
   adjustmentToggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
     padding: 10,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     borderRadius: 10,
   },
   toggleLabel: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   adjustmentsContainer: {
     marginBottom: 20,
@@ -140,42 +150,42 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sliderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 5,
   },
   sliderLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: "#333",
   },
   sliderValue: {
     fontSize: 14,
-    color: '#00897B',
-    fontWeight: '600',
+    color: "#00897B",
+    fontWeight: "600",
   },
   slider: {
     height: 40,
     marginVertical: 5,
   },
   thumb: {
-    backgroundColor: '#00897B',
+    backgroundColor: "#00897B",
   },
   sliderLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 10,
   },
   sliderLabelSmall: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   button: {
     borderRadius: 10,
     padding: 12,
     elevation: 2,
-    alignItems: 'center',
+    alignItems: "center",
   },
   buttonClose: {
     backgroundColor: "#00897B",
@@ -183,7 +193,7 @@ const styles = StyleSheet.create({
   textStyle: {
     color: "white",
     fontWeight: "bold",
-    textAlign: "center"
+    textAlign: "center",
   },
 });
 

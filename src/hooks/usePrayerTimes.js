@@ -35,6 +35,75 @@ export const usePrayerTimes = () => {
   const [error, setError] = useState(null);
   const [locationPermission, setLocationPermission] = useState(null);
 
+  // Prayer time adjustments state
+  const [prayerTimeAdjustments, setPrayerTimeAdjustments] = useState({
+    Fajr: 0,
+    Sunrise: 0,
+    Dhuhr: 0,
+    Asr: 0,
+    Maghrib: 0,
+    Isha: 0,
+  });
+
+  const [enableAdjustments, setEnableAdjustments] = useState(false);
+
+  // Function to apply prayer time adjustments (defined early to avoid hoisting issues)
+  const applyPrayerTimeAdjustments = useCallback(
+    (originalPrayers) => {
+      if (!enableAdjustments) return originalPrayers;
+
+      return originalPrayers.map((prayer) => {
+        const adjustment = prayerTimeAdjustments[prayer.name] || 0;
+        if (adjustment === 0) return prayer;
+
+        // Parse the original time
+        const [time, period] = prayer.time.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+
+        // Convert to 24-hour format if needed
+        if (period) {
+          if (period === "PM" && hours !== 12) hours += 12;
+          if (period === "AM" && hours === 12) hours = 0;
+        }
+
+        // Apply adjustment in minutes
+        const totalMinutes = hours * 60 + minutes + adjustment;
+        let adjustedHours = Math.floor(totalMinutes / 60);
+        let adjustedMinutes = totalMinutes % 60;
+
+        // Handle day overflow
+        let dayOffset = 0;
+        if (adjustedHours >= 24) {
+          adjustedHours -= 24;
+          dayOffset = 1;
+        } else if (adjustedHours < 0) {
+          adjustedHours += 24;
+          dayOffset = -1;
+        }
+
+        // Convert back to 12-hour format if original was 12-hour
+        let formattedTime;
+        if (period) {
+          const newPeriod = adjustedHours >= 12 ? "PM" : "AM";
+          let displayHours = adjustedHours % 12;
+          if (displayHours === 0) displayHours = 12;
+          formattedTime = `${displayHours}:${adjustedMinutes.toString().padStart(2, "0")} ${newPeriod}`;
+        } else {
+          formattedTime = `${adjustedHours.toString().padStart(2, "0")}:${adjustedMinutes.toString().padStart(2, "0")}`;
+        }
+
+        return {
+          ...prayer,
+          time: formattedTime,
+          adjusted: true, // Flag to indicate this time was adjusted
+          originalTime: prayer.time, // Keep original time for reference
+          dayOffset: dayOffset, // For handling day transitions
+        };
+      });
+    },
+    [enableAdjustments, prayerTimeAdjustments],
+  );
+
   /**
    * 1. Attempt to detect user's current Emirate on mount.
    */
@@ -162,9 +231,6 @@ export const usePrayerTimes = () => {
 
   /**
    * 3. Update "Next Prayer" highlight every minute to keep UI fresh.
-   */
-  /**
-   * 3. Update "Next Prayer" highlight every minute to keep UI fresh.
    * Also checks if we need to auto-switch to tomorrow.
    */
   useEffect(() => {
@@ -220,18 +286,6 @@ export const usePrayerTimes = () => {
     setPrayerTimes(prayers);
   }, [displayDate, rawData, applyPrayerTimeAdjustments]);
 
-  // Prayer time adjustments state
-  const [prayerTimeAdjustments, setPrayerTimeAdjustments] = useState({
-    Fajr: 0,
-    Sunrise: 0,
-    Dhuhr: 0,
-    Asr: 0,
-    Maghrib: 0,
-    Isha: 0,
-  });
-
-  const [enableAdjustments, setEnableAdjustments] = useState(false);
-
   // Function to get current Hijri date from the API data
   const getCurrentHijriDate = () => {
     if (!rawData) return null;
@@ -255,17 +309,10 @@ export const usePrayerTimes = () => {
           body: "This is a test alarm to verify notification functionality",
           sound: "default",
           priority: Notifications.AndroidNotificationPriority.MAX,
-          sticky: true,
-          autoDismiss: false,
           data: { prayerName: "Test", type: "test" },
           ...(Platform.OS === "android" && {
             channelId: "prayer-alarm",
             vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
-            category: "alarm",
-            interruptionFilter: "priority",
-            lockScreenVisibility:
-              Notifications.AndroidNotificationVisibility.PUBLIC,
-            fullScreenIntent: true,
           }),
         },
         trigger: {
@@ -283,60 +330,6 @@ export const usePrayerTimes = () => {
   const handleManualEmirateSelection = (emirate) => {
     setSelectedEmirate(emirate);
     setLocationManualOverride(true); // Mark that user manually selected location
-  };
-
-  // Function to apply prayer time adjustments
-  const applyPrayerTimeAdjustments = (originalPrayers) => {
-    if (!enableAdjustments) return originalPrayers;
-
-    return originalPrayers.map((prayer) => {
-      const adjustment = prayerTimeAdjustments[prayer.name] || 0;
-      if (adjustment === 0) return prayer;
-
-      // Parse the original time
-      const [time, period] = prayer.time.split(" ");
-      let [hours, minutes] = time.split(":").map(Number);
-
-      // Convert to 24-hour format if needed
-      if (period) {
-        if (period === "PM" && hours !== 12) hours += 12;
-        if (period === "AM" && hours === 12) hours = 0;
-      }
-
-      // Apply adjustment in minutes
-      const totalMinutes = hours * 60 + minutes + adjustment;
-      let adjustedHours = Math.floor(totalMinutes / 60);
-      let adjustedMinutes = totalMinutes % 60;
-
-      // Handle day overflow
-      let dayOffset = 0;
-      if (adjustedHours >= 24) {
-        adjustedHours -= 24;
-        dayOffset = 1;
-      } else if (adjustedHours < 0) {
-        adjustedHours += 24;
-        dayOffset = -1;
-      }
-
-      // Convert back to 12-hour format if original was 12-hour
-      let formattedTime;
-      if (period) {
-        const newPeriod = adjustedHours >= 12 ? "PM" : "AM";
-        let displayHours = adjustedHours % 12;
-        if (displayHours === 0) displayHours = 12;
-        formattedTime = `${displayHours}:${adjustedMinutes.toString().padStart(2, "0")} ${newPeriod}`;
-      } else {
-        formattedTime = `${adjustedHours.toString().padStart(2, "0")}:${adjustedMinutes.toString().padStart(2, "0")}`;
-      }
-
-      return {
-        ...prayer,
-        time: formattedTime,
-        adjusted: true, // Flag to indicate this time was adjusted
-        originalTime: prayer.time, // Keep original time for reference
-        dayOffset: dayOffset, // For handling day transitions
-      };
-    });
   };
 
   return {

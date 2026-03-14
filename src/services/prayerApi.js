@@ -1,6 +1,5 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { calculatePrayerTimes } from "../utils/prayerCalculationUtils";
 
 /**
  * Service for fetching prayer times from Khaleej Times API.
@@ -149,43 +148,30 @@ export const fetchPrayerTimings = async (location) => {
 
     // If no cache available, calculate prayer times as ultimate fallback
     try {
-      console.log("[API] Calculating prayer times as ultimate fallback");
-      const calculatedTimes = await calculateFallbackPrayerTimes(location);
-
-      // Format the calculated times to match API structure
-      const calculatedData = {
+      console.log("[API] Using default prayer times as fallback");
+      // Use default prayer times for UAE instead of calculation
+      // This is more reliable than astronomical calculations
+      const defaultTimes = {
         data: {
           timings: [
             {
               day: new Date().getDate(),
               timings: {
-                fajr:
-                  calculatedTimes.find((p) => p.name === "Fajr")?.time ||
-                  "05:30",
-                sunrise:
-                  calculatedTimes.find((p) => p.name === "Sunrise")?.time ||
-                  "06:45",
-                dhuhr:
-                  calculatedTimes.find((p) => p.name === "Dhuhr")?.time ||
-                  "12:30",
-                asr:
-                  calculatedTimes.find((p) => p.name === "Asr")?.time ||
-                  "15:45",
-                maghrib:
-                  calculatedTimes.find((p) => p.name === "Maghrib")?.time ||
-                  "18:15",
-                isha:
-                  calculatedTimes.find((p) => p.name === "Isha")?.time ||
-                  "19:45",
+                fajr: "05:30",
+                sunrise: "06:45",
+                dhuhr: "12:30",
+                asr: "15:45",
+                maghrib: "18:15",
+                isha: "19:45",
               },
             },
           ],
         },
       };
 
-      return calculatedData;
+      return defaultTimes;
     } catch (calculationError) {
-      console.error("Error calculating prayer times:", calculationError);
+      console.error("Error using fallback prayer times:", calculationError);
       throw error; // Re-throw original error if everything fails
     }
   }
@@ -256,44 +242,18 @@ export const processPrayerData = (apiData, date = new Date()) => {
     const targetDay = date.getDate();
     const match = timingsData.find((t) => t.day === targetDay && t.timings);
 
-     if (match) {
-       hijriInfo = {
-         day: match.hijri_day,
-         month: match.month, // Hijri month name
-         year: match.hijri_year || apiData.data?.year, // Hijri year
-         day_name: match.day_name,
-       };
-     }
+    if (match) {
+      hijriInfo = {
+        day: match.hijri_day,
+        month: match.month, // Hijri month name
+        year: match.hijri_year || apiData.data?.year, // Hijri year
+        day_name: match.day_name,
+      };
+    }
   }
 
   return {
     prayers,
     hijri: hijriInfo,
   };
-};
-
-/**
- * Calculates prayer times as fallback when API is unavailable
- * @param {string} location - The location/emirate name
- * @param {Date} date - The date for which to calculate prayer times
- * @returns {Array} Array of prayer times in format {name: string, time: string}
- */
-export const calculateFallbackPrayerTimes = async (
-  location,
-  date = new Date(),
-) => {
-  // Define approximate coordinates for UAE emirates
-  const emirateCoordinates = {
-    dubai: { lat: 25.2048, lng: 55.2708, tz: 4 }, // GMT+4
-    "abu-dhabi": { lat: 24.4539, lng: 54.3773, tz: 4 },
-    sharjah: { lat: 25.0752, lng: 55.7571, tz: 4 },
-    ajman: { lat: 25.4052, lng: 55.5136, tz: 4 },
-    "ras-al-khaimah": { lat: 25.6753, lng: 55.9803, tz: 4 },
-    fujairah: { lat: 25.1167, lng: 56.3333, tz: 4 },
-    "umm-al-quwain": { lat: 25.5692, lng: 55.5598, tz: 4 },
-  };
-
-  const coords = emirateCoordinates[location] || emirateCoordinates["dubai"]; // Default to Dubai
-
-  return calculatePrayerTimes(coords.lat, coords.lng, coords.tz, date);
 };

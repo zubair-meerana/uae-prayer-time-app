@@ -8,28 +8,35 @@
  * @returns {Date} Date object set to today's date with the parsed time.
  */
 export const parseTime = (timeStr) => {
-    if (!timeStr) return null;
+  if (!timeStr) return null;
 
-    // Split by space to separate time and time-period if it exists
-    const parts = timeStr.trim().split(/\s+/);
-    const time = parts[0];
-    const period = parts[1] || null; // Could be undefined if 24h format
+  // Split by space to separate time and time-period if it exists
+  const parts = timeStr.trim().split(/\s+/);
+  const time = parts[0];
+  const period = parts[1] || null; // Could be undefined if 24h format
 
-    let [hours, minutes] = time.split(':').map(Number);
+  let [hours, minutes] = time.split(":").map(Number);
 
-    if (period) {
-        if (period.toUpperCase() === 'PM' && hours !== 12) {
-            hours += 12;
-        }
-        if (period.toUpperCase() === 'AM' && hours === 12) {
-            hours = 0;
-        }
+  if (period) {
+    if (period.toUpperCase() === "PM" && hours !== 12) {
+      hours += 12;
     }
+    if (period.toUpperCase() === "AM" && hours === 12) {
+      hours = 0;
+    }
+  }
 
-    const now = new Date();
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+  const now = new Date();
+  const date = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    hours,
+    minutes,
+    0,
+  );
 
-    return date;
+  return date;
 };
 
 /**
@@ -39,10 +46,14 @@ export const parseTime = (timeStr) => {
  * @returns {string}
  */
 export const formatTo12Hour = (timeStr) => {
-    const date = parseTime(timeStr);
-    if (!date) return timeStr;
+  const date = parseTime(timeStr);
+  if (!date) return timeStr;
 
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 };
 
 /**
@@ -51,24 +62,24 @@ export const formatTo12Hour = (timeStr) => {
  * @returns {Object} { nextPrayer: Object | null, isTomorrow: boolean }
  */
 export const getNextPrayer = (prayers) => {
-    if (!prayers || prayers.length === 0) return null;
+  if (!prayers || prayers.length === 0) return null;
 
-    const now = new Date();
+  const now = new Date();
 
-    // Sort prayers just in case
-    const sortedPrayers = [...prayers].sort((a, b) => {
-        return parseTime(a.time) - parseTime(b.time);
-    });
+  // Sort prayers just in case
+  const sortedPrayers = [...prayers].sort((a, b) => {
+    return parseTime(a.time) - parseTime(b.time);
+  });
 
-    for (let i = 0; i < sortedPrayers.length; i++) {
-        const prayerTime = parseTime(sortedPrayers[i].time);
-        if (prayerTime > now) {
-            return { nextPrayer: sortedPrayers[i], isTomorrow: false };
-        }
+  for (let i = 0; i < sortedPrayers.length; i++) {
+    const prayerTime = parseTime(sortedPrayers[i].time);
+    if (prayerTime > now) {
+      return { nextPrayer: sortedPrayers[i], isTomorrow: false };
     }
+  }
 
-    // If we are past the last prayer, the next one is the first prayer of the next day
-    return { nextPrayer: sortedPrayers[0], isTomorrow: true };
+  // If we are past the last prayer, the next one is the first prayer of the next day
+  return { nextPrayer: sortedPrayers[0], isTomorrow: true };
 };
 
 /**
@@ -76,10 +87,15 @@ export const getNextPrayer = (prayers) => {
  * @param {Date} date
  * @param {string} locale - 'en' or 'ar'
  */
-export const formatDate = (date, locale = 'en') => {
-    const locales = locale === 'ar' ? 'ar-AE' : 'en-US';
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString(locales, options);
+export const formatDate = (date, locale = "en") => {
+  const locales = locale === "ar" ? "ar-AE" : "en-US";
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  };
+  return date.toLocaleDateString(locales, options);
 };
 
 /**
@@ -89,20 +105,44 @@ export const formatDate = (date, locale = 'en') => {
  * @returns {string} e.g. "1 hr 25 min" or "25 min"
  */
 export const formatRemainingTime = (diffMs, t) => {
-    if (diffMs <= 0) return '';
+  if (diffMs <= 0) return "";
 
-    const diffMins = Math.ceil(diffMs / (1000 * 60));
+  const diffMins = Math.ceil(diffMs / (1000 * 60));
 
-    if (diffMins < 60) {
-        return `${diffMins} ${t('min')}`;
-    }
+  if (diffMins < 60) {
+    return `${diffMins} ${t("min")}`;
+  }
 
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
+  const hours = Math.floor(diffMins / 60);
+  const mins = diffMins % 60;
 
-    if (mins === 0) {
-        return `${hours} ${t('hour')}`;
-    }
+  if (mins === 0) {
+    return `${hours} ${t("hour")}`;
+  }
 
-    return `${hours} ${t('hour')} ${mins} ${t('min')}`;
+  return `${hours} ${t("hour")} ${mins} ${t("min")}`;
+};
+
+/**
+ * Formats prayer time string to display format (12-hour format)
+ * @param {string} timeStr - Time string from API
+ * @returns {string} Formatted time string
+ */
+export const formatPrayerTime = (timeStr) => {
+  if (!timeStr) return "--:--";
+
+  // If already in 12-hour format with AM/PM, return as is
+  if (timeStr.includes("AM") || timeStr.includes("PM")) {
+    return timeStr.replace(/^\s+/, ""); // Trim leading spaces
+  }
+
+  // Convert 24-hour to 12-hour format
+  const date = parseTime(timeStr);
+  if (!date) return timeStr;
+
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 };

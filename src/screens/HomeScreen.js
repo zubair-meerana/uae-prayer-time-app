@@ -21,20 +21,20 @@ import { registerForPushNotificationsAsync } from "../services/notificationServi
 import { useLanguage } from "../context/LanguageContext";
 
 export default function HomeScreen() {
-   const {
-     selectedEmirate,
-     setSelectedEmirate,
-     prayerTimes,
-     nextPrayer,
-     loading,
-     error,
-     refreshParams,
-     availableEmirates,
-     displayDate,
-     toggleDate,
-     isDisplayingTomorrow,
-     getCurrentHijriDate,
-   } = usePrayerTimes();
+  const {
+    selectedEmirate,
+    setSelectedEmirate,
+    prayerTimes,
+    nextPrayer,
+    loading,
+    error,
+    refreshParams,
+    availableEmirates,
+    displayDate,
+    toggleDate,
+    isDisplayingTomorrow,
+    getCurrentHijriDate,
+  } = usePrayerTimes();
 
   const { t, language, toggleLanguage, isRTL } = useLanguage();
 
@@ -119,7 +119,7 @@ export default function HomeScreen() {
         {nextPrayer && (
           <View style={[styles.banner, isRTL && styles.rtlBanner]}>
             <Text style={styles.bannerText}>
-              {t("nextPrayer")}: {t(`prayers.${nextPrayer.nextPrayer.name}`)}
+              {t("nextPrayer")}: {t(nextPrayer.nextPrayer.name.toLowerCase())}
             </Text>
             <View style={[styles.bannerRow, isRTL && styles.rtlDirection]}>
               <Text style={styles.bannerTime}>
@@ -175,8 +175,6 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
-
-
 
         {/* Footer */}
         <View style={styles.footer}>
