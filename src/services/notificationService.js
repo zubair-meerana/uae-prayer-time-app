@@ -68,13 +68,13 @@ export const registerForPushNotificationsAsync = async () => {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
-  
+
   // For Android, we also need to check if we can post notifications (API 33+)
-  if (Platform.OS === 'android' && Device.deviceId) {
+  if (Platform.OS === "android" && Device.deviceId) {
     try {
       const { granted } = await Notifications.isAvailableAsync();
       if (!granted) {
-        finalStatus = 'undetermined'; // Force permission request
+        finalStatus = "undetermined"; // Force permission request
       }
     } catch (error) {
       console.warn("Error checking notification availability:", error);
@@ -107,16 +107,28 @@ export const schedulePrayerNotifications = async (prayers) => {
     // Always clear previous schedules to avoid "notification together" / duplicates
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    if (!prayers || prayers.length === 0) return;
+    if (!prayers || prayers.length === 0) {
+      console.log("[Schedule] No prayers to schedule");
+      return;
+    }
 
     const nextData = getNextPrayer(prayers);
-    if (!nextData || !nextData.nextPrayer) return;
+    if (!nextData || !nextData.nextPrayer) {
+      console.log("[Schedule] No next prayer found");
+      return;
+    }
 
     const { nextPrayer, isTomorrow } = nextData;
     const prayerTime = parseTime(nextPrayer.time);
 
     if (isTomorrow) {
       prayerTime.setDate(prayerTime.getDate() + 1);
+    }
+
+    // Validate prayerTime is valid
+    if (!prayerTime || isNaN(prayerTime.getTime())) {
+      console.error("[Schedule] Invalid prayer time:", nextPrayer.time);
+      return;
     }
 
     const now = new Date();
@@ -137,6 +149,7 @@ export const schedulePrayerNotifications = async (prayers) => {
           ...(Platform.OS === "android" && { channelId: "prayer-reminder" }),
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: reminderTime, // Use absolute date trigger for precision
         },
       });
@@ -193,6 +206,7 @@ export const schedulePrayerNotifications = async (prayers) => {
           }),
         },
         trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: prayerTime, // Exact date trigger
         },
       });
@@ -206,40 +220,45 @@ export const schedulePrayerNotifications = async (prayers) => {
 };
 
 /**
-   * Registers the background fetch task.
-   */
-  export const registerBackgroundTasks = async () => {
-    if (Platform.OS === "web") return;
+ * Registers the background fetch task.
+ */
+export const registerBackgroundTasks = async () => {
+  if (Platform.OS === "web") return;
 
-    try {
-      const isRegistered = await TaskManager.isTaskRegisteredAsync(
-        PRAYER_BACKGROUND_TASK,
-      );
-      if (!isRegistered) {
-        // Try to register with preferred configuration first
-        try {
-          await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
-            minimumInterval: 60 * 5, // Every 5 minutes for more frequent checks
-            stopOnTerminate: false,
-            startOnBoot: true,
-          });
-          console.log("Background task registered with 5-minute interval");
-        } catch (primaryError) {
-          console.log("Primary background task registration failed:", primaryError);
-          
-          // Fallback to 15-minute interval
-          await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
-            minimumInterval: 60 * 15, // 15 minutes as fallback
-            stopOnTerminate: false,
-            startOnBoot: true,
-          });
-          console.log("Background task registered with 15-minute interval fallback");
-        }
+  try {
+    const isRegistered = await TaskManager.isTaskRegisteredAsync(
+      PRAYER_BACKGROUND_TASK,
+    );
+    if (!isRegistered) {
+      // Try to register with preferred configuration first
+      try {
+        await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
+          minimumInterval: 60 * 5, // Every 5 minutes for more frequent checks
+          stopOnTerminate: false,
+          startOnBoot: true,
+        });
+        console.log("Background task registered with 5-minute interval");
+      } catch (primaryError) {
+        console.log(
+          "Primary background task registration failed:",
+          primaryError,
+        );
+
+        // Fallback to 15-minute interval
+        await BackgroundTask.registerTaskAsync(PRAYER_BACKGROUND_TASK, {
+          minimumInterval: 60 * 15, // 15 minutes as fallback
+          stopOnTerminate: false,
+          startOnBoot: true,
+        });
+        console.log(
+          "Background task registered with 15-minute interval fallback",
+        );
       }
-    } catch (err) {
-      console.log("Background task registration failed:", err);
     }
-  };
+  } catch (err) {
+    console.log("Background task registration failed:", err);
+  }
+};
 
 /**
  * Pre-schedule prayer notifications for the entire month when app starts or updates prayer times
@@ -293,6 +312,14 @@ export const preScheduleMonthlyPrayerNotifications = async (
         const prayerTime = parseTimeForDate(prayerTimeString, targetDate);
         const now = new Date();
 
+        // Validate prayerTime is a valid date
+        if (!prayerTime || isNaN(prayerTime.getTime())) {
+          console.warn(
+            `[Skip] Invalid prayer time for ${prayerName} on ${targetDate.toDateString()}: ${prayerTimeString}`,
+          );
+          continue;
+        }
+
         // Only schedule for future times
         if (prayerTime > now) {
           const prayerSettings = notificationSettings[prayerName] || {
@@ -303,43 +330,58 @@ export const preScheduleMonthlyPrayerNotifications = async (
 
           // Schedule the main prayer alarm if enabled
           if (prayerSettings.alarmEnabled) {
-            await Notifications.scheduleNotificationAsync(
-              {
-                title: `🕌 ${prayerName} Prayer Time`,
-                body: `It is now time for ${prayerName} prayer`,
-                sound: "default",
-                priority: Notifications.AndroidNotificationPriority.MAX,
-                sticky: true,
-                autoDismiss: false,
-                data: {
-                  prayerName,
-                  type: "alarm",
-                  date: targetDate.toISOString(),
-                },
-                ...(Platform.OS === "android" && {
-                  channelId: "prayer-alarm",
-                  vibrationPattern: prayerSettings.vibration
-                    ? [0, 1000, 500, 1000, 500, 1000]
-                    : null,
-                  category: "alarm",
-                  interruptionFilter: "priority",
-                  lockScreenVisibility:
-                    Notifications.AndroidNotificationVisibility.PUBLIC,
-                  fullScreenIntent: true,
-                }),
-                ios: {
-                  sound: "default",
-                  _tag: `prayer-${prayerName}-${targetDate.toISOString()}`, // Unique identifier
-                },
-              },
-              {
-                date: prayerTime,
-              },
-            );
+            try {
+              // Validate trigger date before scheduling
+              if (!prayerTime || isNaN(prayerTime.getTime())) {
+                throw new Error(
+                  `Invalid prayerTime for ${prayerName}: ${prayerTime}`,
+                );
+              }
 
-            console.log(
-              `[Pre-scheduled] Alarm for ${prayerName} on ${targetDate.toDateString()} at ${prayerTime.toLocaleTimeString()}`,
-            );
+              await Notifications.scheduleNotificationAsync({
+                content: {
+                  title: `🕌 ${prayerName} Prayer Time`,
+                  body: `It is now time for ${prayerName} prayer`,
+                  sound: "default",
+                  priority: Notifications.AndroidNotificationPriority.MAX,
+                  sticky: true,
+                  autoDismiss: false,
+                  data: {
+                    prayerName,
+                    type: "alarm",
+                    date: targetDate.toISOString(),
+                  },
+                  ...(Platform.OS === "android" && {
+                    channelId: "prayer-alarm",
+                    vibrationPattern: prayerSettings.vibration
+                      ? [0, 1000, 500, 1000, 500, 1000]
+                      : null,
+                    category: "alarm",
+                    interruptionFilter: "priority",
+                    lockScreenVisibility:
+                      Notifications.AndroidNotificationVisibility.PUBLIC,
+                    fullScreenIntent: true,
+                  }),
+                  ios: {
+                    sound: "default",
+                    _tag: `prayer-${prayerName}-${targetDate.toISOString()}`, // Unique identifier
+                  },
+                },
+                trigger: {
+                  type: Notifications.SchedulableTriggerInputTypes.DATE,
+                  date: prayerTime,
+                },
+              });
+
+              console.log(
+                `[Pre-scheduled] Alarm for ${prayerName} on ${targetDate.toDateString()} at ${prayerTime.toLocaleTimeString()}`,
+              );
+            } catch (alarmError) {
+              console.error(
+                `[Error] Failed to schedule alarm for ${prayerName} on ${targetDate.toDateString()}:`,
+                alarmError,
+              );
+            }
           }
 
           // Schedule reminder if enabled
@@ -349,33 +391,48 @@ export const preScheduleMonthlyPrayerNotifications = async (
             );
 
             if (reminderTime > now) {
-              await Notifications.scheduleNotificationAsync(
-                {
-                  title: `⏰ ${prayerName} Prayer Soon`,
-                  body: `${prayerName} starts in ${REMINDER_MINUTES} minutes`,
-                  sound: "default",
-                  priority: Notifications.AndroidNotificationPriority.HIGH,
-                  data: {
-                    prayerName,
-                    type: "reminder",
-                    date: targetDate.toISOString(),
-                  },
-                  ...(Platform.OS === "android" && {
-                    channelId: "prayer-reminder",
-                  }),
-                  ios: {
-                    sound: "default",
-                    _tag: `reminder-${prayerName}-${targetDate.toISOString()}`, // Unique identifier
-                  },
-                },
-                {
-                  date: reminderTime,
-                },
-              );
+              try {
+                // Validate trigger date before scheduling
+                if (!reminderTime || isNaN(reminderTime.getTime())) {
+                  throw new Error(
+                    `Invalid reminderTime for ${prayerName}: ${reminderTime}`,
+                  );
+                }
 
-              console.log(
-                `[Pre-scheduled] Reminder for ${prayerName} on ${targetDate.toDateString()} at ${reminderTime.toLocaleTimeString()}`,
-              );
+                await Notifications.scheduleNotificationAsync({
+                  content: {
+                    title: `⏰ ${prayerName} Prayer Soon`,
+                    body: `${prayerName} starts in ${REMINDER_MINUTES} minutes`,
+                    sound: "default",
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
+                    data: {
+                      prayerName,
+                      type: "reminder",
+                      date: targetDate.toISOString(),
+                    },
+                    ...(Platform.OS === "android" && {
+                      channelId: "prayer-reminder",
+                    }),
+                    ios: {
+                      sound: "default",
+                      _tag: `reminder-${prayerName}-${targetDate.toISOString()}`, // Unique identifier
+                    },
+                  },
+                  trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DATE,
+                    date: reminderTime,
+                  },
+                });
+
+                console.log(
+                  `[Pre-scheduled] Reminder for ${prayerName} on ${targetDate.toDateString()} at ${reminderTime.toLocaleTimeString()}`,
+                );
+              } catch (reminderError) {
+                console.error(
+                  `[Error] Failed to schedule reminder for ${prayerName} on ${targetDate.toDateString()}:`,
+                  reminderError,
+                );
+              }
             }
           }
         }
@@ -448,55 +505,19 @@ export const listScheduledNotifications = async () => {
 };
 
 /**
-   * Background Task Definition
-   * Runs periodically to ensure notifications are refreshed even if the app isn't opened.
-   */
-  TaskManager.defineTask(PRAYER_BACKGROUND_TASK, async () => {
-    try {
-      const now = new Date();
-      let rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA);
+ * Background Task Definition
+ * Runs periodically to ensure notifications are refreshed even if the app isn't opened.
+ */
+TaskManager.defineTask(PRAYER_BACKGROUND_TASK, async () => {
+  try {
+    const now = new Date();
+    let rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA);
 
-      // Always try to get fresh data if we don't have valid cached data
-      if (!rawDataStr) {
-        console.log("Background task: No cached data found, attempting to fetch fresh data");
-        try {
-          // Get the last known location/emirate from storage
-          const lastKnownEmirate = await AsyncStorage.getItem(
-            "@last_known_emirate",
-          );
-          if (lastKnownEmirate) {
-            const freshData = await fetchPrayerTimings(lastKnownEmirate);
-            await preScheduleMonthlyPrayerNotifications(
-              freshData,
-              lastKnownEmirate,
-            );
-
-            // Store the fresh data for future background tasks
-            await storeRawDataForBackground(freshData);
-            rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA); // Refresh the cached data
-          }
-        } catch (fetchError) {
-          console.error("Background task: Failed to fetch fresh data:", fetchError);
-          // Continue with whatever cached data we might have
-        }
-      }
-
-      if (rawDataStr) {
-        const rawData = JSON.parse(rawDataStr);
-        const processedData = processPrayerData(rawData, now);
-        const prayers = processedData.prayers || processedData;
-        // Use the pre-scheduling function to ensure all monthly notifications are scheduled
-        const lastKnownEmirate = await AsyncStorage.getItem(
-          "@last_known_emirate",
-        );
-        if (lastKnownEmirate) {
-          await preScheduleMonthlyPrayerNotifications(rawData, lastKnownEmirate);
-        }
-
-        return BackgroundTask.BackgroundTaskResult.NewData;
-      }
-
-      // If we still don't have data, try one more time to fetch based on IP location detection
+    // Always try to get fresh data if we don't have valid cached data
+    if (!rawDataStr) {
+      console.log(
+        "Background task: No cached data found, attempting to fetch fresh data",
+      );
       try {
         // Get the last known location/emirate from storage
         const lastKnownEmirate = await AsyncStorage.getItem(
@@ -511,19 +532,63 @@ export const listScheduledNotifications = async () => {
 
           // Store the fresh data for future background tasks
           await storeRawDataForBackground(freshData);
-
-          return BackgroundTask.BackgroundTaskResult.NewData;
+          rawDataStr = await AsyncStorage.getItem(STORAGE_KEY_RAW_DATA); // Refresh the cached data
         }
       } catch (fetchError) {
-        console.error("Background task: Failed to fetch fresh data on retry:", fetchError);
+        console.error(
+          "Background task: Failed to fetch fresh data:",
+          fetchError,
+        );
+        // Continue with whatever cached data we might have
+      }
+    }
+
+    if (rawDataStr) {
+      const rawData = JSON.parse(rawDataStr);
+      const processedData = processPrayerData(rawData, now);
+      const prayers = processedData.prayers || processedData;
+      // Use the pre-scheduling function to ensure all monthly notifications are scheduled
+      const lastKnownEmirate = await AsyncStorage.getItem(
+        "@last_known_emirate",
+      );
+      if (lastKnownEmirate) {
+        await preScheduleMonthlyPrayerNotifications(rawData, lastKnownEmirate);
       }
 
-      return BackgroundTask.BackgroundTaskResult.NoData;
-    } catch (error) {
-      console.error("Background task error:", error);
-      return BackgroundTask.BackgroundTaskResult.Failed;
+      return BackgroundTask.BackgroundTaskResult.NewData;
     }
-  });
+
+    // If we still don't have data, try one more time to fetch based on IP location detection
+    try {
+      // Get the last known location/emirate from storage
+      const lastKnownEmirate = await AsyncStorage.getItem(
+        "@last_known_emirate",
+      );
+      if (lastKnownEmirate) {
+        const freshData = await fetchPrayerTimings(lastKnownEmirate);
+        await preScheduleMonthlyPrayerNotifications(
+          freshData,
+          lastKnownEmirate,
+        );
+
+        // Store the fresh data for future background tasks
+        await storeRawDataForBackground(freshData);
+
+        return BackgroundTask.BackgroundTaskResult.NewData;
+      }
+    } catch (fetchError) {
+      console.error(
+        "Background task: Failed to fetch fresh data on retry:",
+        fetchError,
+      );
+    }
+
+    return BackgroundTask.BackgroundTaskResult.NoData;
+  } catch (error) {
+    console.error("Background task error:", error);
+    return BackgroundTask.BackgroundTaskResult.Failed;
+  }
+});
 
 /**
  * Gets notification settings from AsyncStorage

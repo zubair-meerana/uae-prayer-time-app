@@ -116,7 +116,8 @@ export const usePrayerTimes = () => {
 
       // Initial load always tries to show "Today" first, then we update if needed
       const now = new Date();
-      let processedPrayers = processPrayerData(data, now);
+      let processedData = processPrayerData(data, now);
+      let processedPrayers = processedData.prayers || processedData;
 
       // Apply prayer time adjustments if enabled
       processedPrayers = applyPrayerTimeAdjustments(processedPrayers);
@@ -134,7 +135,8 @@ export const usePrayerTimes = () => {
         tomorrow.setDate(now.getDate() + 1);
 
         setDisplayDate(tomorrow);
-        let tomorrowPrayers = processPrayerData(data, tomorrow);
+        let tomorrowData = processPrayerData(data, tomorrow);
+        let tomorrowPrayers = tomorrowData.prayers || tomorrowData;
         tomorrowPrayers = applyPrayerTimeAdjustments(tomorrowPrayers);
         setPrayerTimes(tomorrowPrayers);
       }
@@ -172,7 +174,8 @@ export const usePrayerTimes = () => {
         const now = new Date();
 
         // Always check against TODAY'S data to decide transition
-        let todayPrayers = processPrayerData(rawData, now);
+        let todayData = processPrayerData(rawData, now);
+        let todayPrayers = todayData.prayers || todayData;
         // Apply prayer time adjustments if enabled
         todayPrayers = applyPrayerTimeAdjustments(todayPrayers);
 
@@ -211,7 +214,8 @@ export const usePrayerTimes = () => {
 
     setManualOverride(true); // User took control
     setDisplayDate(newDate);
-    let prayers = processPrayerData(rawData, newDate);
+    let prayerData = processPrayerData(rawData, newDate);
+    let prayers = prayerData.prayers || prayerData;
     prayers = applyPrayerTimeAdjustments(prayers);
     setPrayerTimes(prayers);
   }, [displayDate, rawData, applyPrayerTimeAdjustments]);
@@ -227,6 +231,53 @@ export const usePrayerTimes = () => {
   });
 
   const [enableAdjustments, setEnableAdjustments] = useState(false);
+
+  // Function to get current Hijri date from the API data
+  const getCurrentHijriDate = () => {
+    if (!rawData) return null;
+
+    const todayData = processPrayerData(rawData, new Date());
+    return todayData.hijri || null;
+  };
+
+  // Function to trigger a test alarm in 5 seconds
+  const triggerTestAlarm = async () => {
+    try {
+      // Cancel any existing scheduled notifications
+      await Notifications.cancelAllScheduledNotificationsAsync();
+
+      // Schedule a test notification for 5 seconds from now
+      const testTime = new Date(Date.now() + 5000); // 5 seconds from now
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "🕌 Test Prayer Alarm",
+          body: "This is a test alarm to verify notification functionality",
+          sound: "default",
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          sticky: true,
+          autoDismiss: false,
+          data: { prayerName: "Test", type: "test" },
+          ...(Platform.OS === "android" && {
+            channelId: "prayer-alarm",
+            vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
+            category: "alarm",
+            interruptionFilter: "priority",
+            lockScreenVisibility:
+              Notifications.AndroidNotificationVisibility.PUBLIC,
+            fullScreenIntent: true,
+          }),
+        },
+        trigger: {
+          date: testTime,
+        },
+      });
+
+      console.log("Test alarm scheduled for:", testTime.toLocaleTimeString());
+    } catch (error) {
+      console.error("Error scheduling test alarm:", error);
+    }
+  };
 
   // Function to handle manual emirate selection
   const handleManualEmirateSelection = (emirate) => {
@@ -308,52 +359,5 @@ export const usePrayerTimes = () => {
     applyPrayerTimeAdjustments,
     triggerTestAlarm,
     getCurrentHijriDate,
-  };
-
-  // Function to get current Hijri date from the API data
-  const getCurrentHijriDate = () => {
-    if (!rawData) return null;
-
-    const todayData = processPrayerData(rawData, new Date());
-    return todayData.hijri || null;
-  };
-
-  // Function to trigger a test alarm in 5 seconds
-  const triggerTestAlarm = async () => {
-    try {
-      // Cancel any existing scheduled notifications
-      await Notifications.cancelAllScheduledNotificationsAsync();
-
-      // Schedule a test notification for 5 seconds from now
-      const testTime = new Date(Date.now() + 5000); // 5 seconds from now
-
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "🕌 Test Prayer Alarm",
-          body: "This is a test alarm to verify notification functionality",
-          sound: "default",
-          priority: Notifications.AndroidNotificationPriority.MAX,
-          sticky: true,
-          autoDismiss: false,
-          data: { prayerName: "Test", type: "test" },
-          ...(Platform.OS === "android" && {
-            channelId: "prayer-alarm",
-            vibrationPattern: [0, 1000, 500, 1000, 500, 1000],
-            category: "alarm",
-            interruptionFilter: "priority",
-            lockScreenVisibility:
-              Notifications.AndroidNotificationVisibility.PUBLIC,
-            fullScreenIntent: true,
-          }),
-        },
-        trigger: {
-          date: testTime,
-        },
-      });
-
-      console.log("Test alarm scheduled for:", testTime.toLocaleTimeString());
-    } catch (error) {
-      console.error("Error scheduling test alarm:", error);
-    }
   };
 };
