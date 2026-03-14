@@ -2,25 +2,33 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useLanguage } from "../context/LanguageContext";
 import { usePrayerTimes } from "../hooks/usePrayerTimes";
+import { getCurrentHijriDate as calculateLocalHijriDate } from "../utils/islamicCalendarUtils";
 
 const IslamicCalendar = () => {
   const { t, language, isRTL } = useLanguage();
-  const { getCurrentHijriDate } = usePrayerTimes();
+  const { getCurrentHijriDate, prayerTimes } = usePrayerTimes();
   const [hijriDate, setHijriDate] = useState(null);
 
   useEffect(() => {
     const loadHijriDate = () => {
-      const hijri = getCurrentHijriDate();
+      // First try to get hijri date from API data
+      let hijri = getCurrentHijriDate();
+
+      // If API data is not available, calculate locally
+      if (!hijri) {
+        hijri = calculateLocalHijriDate();
+      }
+
       setHijriDate(hijri);
     };
 
     loadHijriDate();
 
-    // Update every hour to ensure accuracy (less frequent than every minute)
+    // Update every hour to ensure accuracy
     const interval = setInterval(loadHijriDate, 60 * 60 * 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [prayerTimes]); // Re-run when prayerTimes changes
 
   const formatHijriDate = (hijri) => {
     if (!hijri) return "";
