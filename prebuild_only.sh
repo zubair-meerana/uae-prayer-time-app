@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -e
+npm install -g eas-cli
 
 # --- 1. Environment Sync ---
 export ANDROID_HOME=/opt/android-sdk

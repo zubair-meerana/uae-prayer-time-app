@@ -12,7 +12,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "requireFullScreen": false,
@@ -22,6 +24,7 @@
       }
     },
     "android": {
+      "newArchEnabled": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -55,7 +58,9 @@
           "icon": "./assets/icon.png",
           "color": "#00897B",
           "mode": "production",
-          "sounds": ["./assets/notification.wav"]
+          "sounds": [
+            "./assets/notification.wav"
+          ]
         }
       ],
       [
@@ -64,8 +69,15 @@
           "locationAlwaysAndWhenInUsePermission": "Allow UAE Prayer Times to use your location for prayer times."
         }
       ],
-      ["expo-background-task", {}],
-      ["expo-task-manager", {}]
+      [
+        "expo-background-task",
+        {}
+      ],
+      [
+        "expo-task-manager",
+        {}
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true
